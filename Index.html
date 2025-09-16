@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Esame di Scherma</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .confetti-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+
+<div class="max-w-4xl mx-auto bg-white rounded-xl shadow-lg p-6 sm:p-8 space-y-6 border border-gray-200">
+    <div class="text-center space-y-2">
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-800">Esame di Scherma</h1>
+        <p class="text-gray-600">Seleziona i dettagli dell'esame e rispondi alle domande.</p>
+    </div>
+
+    <div class="space-y-4">
+        <div>
+            <label for="userName" class="block text-sm font-medium text-gray-700">Nome e Cognome</label>
+            <input type="text" id="userName" placeholder="Inserisci il tuo nome" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="examLevel" class="block text-sm font-medium text-gray-700">Livello Esame</label>
+                <select id="examLevel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border cursor-pointer">
+                    <option value="" disabled selected>Seleziona un livello</option>
+                    <option value="primo">Tecnico di Primo Livello</option>
+                    <option value="secondo">Tecnico di Secondo Livello</option>
+                    <option value="terzo">Tecnico di Terzo Livello</option>
+                </select>
+            </div>
+            <div>
+                <label for="weaponType" class="block text-sm font-medium text-gray-700">Arma / Categoria</label>
+                <select id="weaponType" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border cursor-pointer">
+                    <option value="" disabled selected>Seleziona un'arma/categoria</option>
+                    <option value="generale">Generale</option>
+                    <option value="regolamento">Regolamento</option>
+                    <option value="spada">Spada</option>
+                    <option value="fioretto">Fioretto</option>
+                    <option value="sciabola">Sciabola</option>
+                    <option value="paralimpica">Paralimpica</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div id="quizSection" class="hidden">
+        <h2 class="text-2xl font-semibold text-gray-800 mt-6 mb-4">Domande dell'Esame</h2>
+        <form id="quizForm" class="space-y-6"></form>
+        <div class="mt-6">
+            <button id="submitButton" class="w-full bg-blue-600 text-white p-3 rounded-md font-semibold hover:bg-blue-700 transition-colors duration-200">Verifica</button>
+        </div>
+    </div>
+
+    <div id="resultContainer" class="mt-6 text-center space-y-4 hidden">
+        <h2 class="text-2xl font-bold">Risultato</h2>
+        <div id="scoreDisplay" class="text-3xl font-extrabold"></div>
+        <button id="restartButton" class="bg-gray-500 text-white p-2 rounded-md hover:bg-gray-600 transition-colors duration-200">Riprova</button>
+    </div>
+    
+    <div id="emailNote" class="mt-6 text-sm text-gray-500 text-center">
+        *L'invio dell'email è una funzionalità lato server. In un'applicazione reale, dopo aver verificato le risposte, questi dati verrebbero inviati a un server che si occuperebbe dell'invio.
+    </div>
+
+</div>
+
+<canvas id="confetti-canvas" class="confetti-canvas"></canvas>
+
+<script>
+    const quizData = {
+        generale: {
+            primo: [
+                { question: "Quali sono i quattro livelli di qualifiche SNaQ per tecnici sportivi?", answers: ["Aiuto allenatore, Allenatore, Allenatore capo, Tecnico di quarto livello", "Istruttore, Tecnico regionale, Tecnico nazionale, Maestro", "Allievo, Aspirante, Istruttore, Maestro", "Tecnico di base, Tecnico federale, Tecnico nazionale, Tecnico internazionale"], correct: "Aiuto allenatore, Allenatore, Allenatore capo, Tecnico di quarto livello" },
+                { question: "Quale capacità motoria è descritta come l'abilità di compiere movimenti ampi e al massimo dell'escursione fisiologica consentita dalle articolazioni?", answers: ["Forza", "Velocità/rapidità", "Resistenza", "Mobilità articolare o flessibilità"], correct: "Mobilità articolare o flessibilità" },
+                { question: "Qual è uno degli obiettivi principali che lo SNaQ vuole raggiungere?", answers: ["Omogeneità per tutte le discipline sportive", "Creare un sistema di finanziamento unico", "Eliminare le figure professionali non certificate", "Promuovere esclusivamente lo sport professionistico"], correct: "Omogeneità per tutte le discipline sportive" },
+                { question: "A che fascia d'età è consigliato un intervento progressivo sulla coordinazione neuromuscolare?", answers: ["6-7 anni", "8-11 anni", "12-14 anni", "15-16 anni"], correct: "8-11 anni" },
+                { question: "Quale fase dell'allenamento giovanile si concentra sulla 'costruzione dei presupposti generali della prestazione'?", answers: ["Fase di alta prestazione", "Fase di allenamento di base", "Fase di specializzazione avanzata", "Fase di allenamento di costruzione"], correct: "Fase di allenamento di base" },
+                { question: "Cosa si intende per 'Multilateralità' nell'allenamento?", answers: ["Allenamento di tutte le capacità per il miglioramento individuale", "L'uso di un numero ampio di mezzi e metodi", "La partecipazione a diverse discipline sportive", "L'allenamento focalizzato su un'unica abilità"], correct: "Allenamento di tutte le capacità per il miglioramento individuale" },
+                { question: "Cosa si intende per 'Omeostasi'?", answers: ["L'alterazione dell'ambiente interno", "La capacità di adattarsi a stimoli esterni", "La stanchezza post-allenamento", "La capacità di mantenere costante l'ambiente interno"], correct: "La capacità di mantenere costante l'ambiente interno" },
+                { question: "Secondo le teorie di Bernstein, cosa accade alla coordinazione del movimento durante l'apprendimento?", answers: ["Il principiante usa schemi coordinativi preferiti", "Il principiante 'congela' le articolazioni e poi le sblocca", "I movimenti diventano meno coordinati con la pratica", "L'atleta esperto richiede più energia per il movimento"], correct: "Il principiante 'congela' le articolazioni e poi le sblocca" },
+                { question: "Cos'è la 'Multiformità' nell'allenamento?", answers: ["L'allenamento che usa una vasta gamma di mezzi e metodi", "L'allenamento che combina sport diversi", "L'allenamento che si concentra solo su una capacità", "L'allenamento che dura a lungo"], correct: "L'allenamento che usa una vasta gamma di mezzi e metodi" },
+                { question: "Cosa afferma l'effetto Pigmalione o Rosenthal?", answers: ["Che le aspettative positive degli insegnanti possono migliorare il rendimento degli studenti", "Che l'apprendimento dipende solo dal talento innato", "Che un ambiente senza giudizio rallenta la crescita", "Che l'apprendimento per imitazione è inefficace"], correct: "Che le aspettative positive degli insegnanti possono migliorare il rendimento degli studenti" }
+            ],
+            secondo: [
+                { question: "Quale D.Lgs. introduce la Riforma dello Sport a partire dalla stagione 2023/24?", answers: ["D.L. 15/2016", "L. 145/2018", "D.lgs. n. 36/2021", "D.lgs. n. 39/2021"], correct: "D.lgs. n. 36/2021" },
+                { question: "Cosa si intende per 'Open Skills' negli sport di situazione?", answers: ["Abilità eseguite in un ambiente costante", "Abilità che si svolgono in un ambiente mutevole", "Abilità che non richiedono decisioni rapide", "Abilità prettamente anaerobiche"], correct: "Abilità che si svolgono in un ambiente mutevole" },
+                { question: "Cosa si intende per 'Densità' tra i parametri del carico di lavoro?", answers: ["La misura quantitativa del lavoro", "La modalità di esecuzione del lavoro", "Il rapporto fra tempo totale e tempo effettivo di lavoro", "L'alternanza tra carico e recupero"], correct: "Il rapporto fra tempo totale e tempo effettivo di lavoro" },
+                { question: "In quale fascia d'età si sviluppa la 'capacità di reazione'?", answers: ["3-5 anni", "6-7 anni", "8-11 anni", "15-16 anni"], correct: "6-7 anni" },
+                { question: "Qual è un obiettivo specifico della preparazione fisica in fase di avviamento?", answers: ["Familiarizzazione con la sala e la pedana", "Incremento della forza massimale", "Specializzazione precoce", "Partecipazione a gare internazionali"], correct: "Familiarizzazione con la sala e la pedana" },
+                { question: "Quale tra le seguenti non è una delle fasi dell'apprendimento motorio secondo il modello di Fitts e Posner?", answers: ["Fase cognitiva", "Fase associativa", "Fase di valutazione", "Fase autonoma"], correct: "Fase di valutazione" },
+                { question: "Qual è la natura giuridica delle Federazioni Sportive Nazionali secondo lo Statuto del CONI?", answers: ["Enti pubblici", "Organi del CONI", "Associazioni senza fine di lucro con personalità giuridica di diritto privato", "Società di capitali con scopo di lucro"], correct: "Associazioni senza fine di lucro con personalità giuridica di diritto privato" },
+                { question: "Cosa permette di misurare il test dell'Attendibilità?", answers: ["La capacità che si vuole misurare", "Il grado di concordanza tra osservatori", "La costanza della misurazione a parità di condizioni", "La prognosi dei futuri livelli di prestazione"], correct: "La costanza della misurazione a parità di condizioni" },
+                { question: "Cosa si intende per 'Lavoro sportivo' nella Riforma dello Sport?", answers: ["Solo il volontariato puro", "Lavoro subordinato, autonomo o co.co.co.", "Solo il lavoro professionistico", "Qualsiasi attività sportiva retribuita"], correct: "Lavoro subordinato, autonomo o co.co.co." },
+                { question: "Qual è l'obiettivo principale della preparazione fisica per uno schermidore?", answers: ["Incrementare la resistenza generale", "Aumentare la massa muscolare", "Sviluppare gli aspetti coordinativi e le capacità cognitive e psicologiche", "Specializzazione su un'unica capacità"], correct: "Sviluppare gli aspetti coordinativi e le capacità cognitive e psicologiche" }
+            ],
+            terzo: [
+                { question: "Cos'è l'Apprendimento per prove ed errori?", answers: ["La modalità principale per perfezionare le abilità motorie", "La modalità più efficace con i principianti", "L'apprendimento basato su premi e punizioni", "La nascita di nuovi schemi di azione"], correct: "La modalità principale per perfezionare le abilità motorie" },
+                { question: "Quale dei seguenti non è un obiettivo della valutazione motoria?", answers: ["Diagnosi della prestazione", "Controllo dell'allenamento", "Valutare i mezzi finanziari", "Prognosi dei futuri livelli di prestazione"], correct: "Valutare i mezzi finanziari" },
+                { question: "Secondo l'Art. 67 del TUIR, i compensi sportivi dilettantistici non concorrono a formare il reddito per un importo non superiore a:", answers: ["€ 5.000", "€ 10.000", "€ 15.000", "€ 20.000"], correct: "€ 10.000" },
+                { question: "Quale tra le seguenti non è una delle fasi della programmazione didattica?", answers: ["Fase preliminare", "Fase interattiva", "Fase di valutazione", "Fase di competizione"], correct: "Fase di competizione" },
+                { question: "Cosa si intende per 'Plasticità cerebrale'?", answers: ["La capacità del cervello di consumare meno energia", "L'abilità di un atleta di prevedere le mosse", "Il rimodellamento incessante del cervello in base alle esperienze", "Il processo di perdita di neuroni"], correct: "Il rimodellamento incessante del cervello in base alle esperienze" },
+                { question: "Quale capacità coordinativa si riferisce all'abilità di sentire e riprodurre una sequenza temporale?", answers: ["Combinazione", "Equilibrio", "Ritmo", "Anticipazione"], correct: "Ritmo" },
+                { question: "Qual è il rapporto tra 'Prestazione' e 'Apprendimento'?", answers: ["Sono la stessa cosa", "L'apprendimento è il cambiamento stabile, la prestazione è il comportamento osservabile nel momento", "La prestazione porta all'apprendimento, ma non il contrario", "L'apprendimento è temporaneo, la prestazione è permanente"], correct: "L'apprendimento è il cambiamento stabile, la prestazione è il comportamento osservabile nel momento" },
+                { question: "Quale tra le seguenti è una delle macroaree della comunicazione?", answers: ["Comunicazione aggressiva", "Comunicazione non verbale", "Comunicazione esplorativa", "Comunicazione autoritaria"], correct: "Comunicazione esplorativa" },
+                { question: "Cosa si intende per 'carico esterno' e 'carico interno' nell'allenamento?", answers: ["Il carico esterno è il lavoro svolto, il carico interno è la risposta dell'organismo", "Il carico esterno è il recupero, il carico interno è il lavoro", "Sono sinonimi", "Il carico esterno è il riposo, il carico interno è lo stress"], correct: "Il carico esterno è il lavoro svolto, il carico interno è la risposta dell'organismo" },
+                { question: "Secondo il decalogo del tecnico, quale principio promuove la collaborazione?", answers: ["Io sono un esempio", "Rispetto il metodo di lavoro scelto", "Tutti assieme si vince", "Curo il linguaggio"], correct: "Tutti assieme si vince" }
+            ]
+        },
+        regolamento: {
+            primo: [
+                { question: "In quante parti ideologicamente si suddivide la lama di una spada?", answers: ["Forte, Medio, Debole", "Punta, Medio, Tallone", "Coccia, Manico, Pomolo", "Ricasso, Codolo, Punta"], correct: "Forte, Medio, Debole" },
+                { question: "Cosa si intende per 'Linea direttrice' nella scherma?", answers: ["La linea orizzontale del bersaglio", "La linea di attacco del fioretto", "La linea immaginaria di movimento dello schermidore in pedana", "La linea che divide il campo in due"], correct: "La linea immaginaria di movimento dello schermidore in pedana" },
+                { question: "Qual è il peso massimo consentito per il fioretto?", answers: ["500 grammi", "770 grammi", "110 centimetri", "450 grammi"], correct: "500 grammi" },
+                { question: "Secondo il regolamento FIE, la lunghezza totale della sciabola deve essere inferiore a:", answers: ["880 mm", "900 mm", "1050 mm", "1100 mm"], correct: "1050 mm" },
+                { question: "Qual è la differenza principale nel bersaglio valido tra fioretto e spada?", answers: ["Nella spada il bersaglio è limitato al tronco, nel fioretto no", "Nella spada il bersaglio è solo la testa, nel fioretto tutto il corpo", "Nel fioretto il bersaglio è solo il tronco, nella spada è tutto il corpo", "Non ci sono differenze"], correct: "Nel fioretto il bersaglio è solo il tronco, nella spada è tutto il corpo" },
+                { question: "Cosa si intende per 'Tempo comune' in un assalto di fioretto?", answers: ["Un'azione simultanea che viene giudicata nulla", "Un colpo che arriva con un tempo di anticipo", "Un attacco che si compone di un solo movimento", "La durata minima di un assalto"], correct: "Un'azione simultanea che viene giudicata nulla" },
+                { question: "Nella sciabola, quali sono le parti della lama con cui si può colpire?", answers: ["Solo di punta", "Di punta, di taglio e di controtaglio", "Solo di taglio e di controtaglio", "Solo di punta e di taglio"], correct: "Di punta, di taglio e di controtaglio" },
+                { question: "Qual è il tempo limite per il colpo doppio nella spada, secondo il trattato FIE?", answers: ["1/10 di secondo", "1/20-1/25 di secondo", "1/5 di secondo", "Non c'è un tempo limite"], correct: "1/20-1/25 di secondo" },
+                { question: "Secondo il Trattato della Spada, il peso complessivo della spada non deve essere inferiore a:", answers: ["500 gr.", "650 gr.", "770 gr.", "1100 gr."], correct: "770 gr." },
+                { question: "Quale parte della sciabola serve a proteggere la mano?", answers: ["Il tallone", "La coccia", "Il gavigliano", "Il manico"], correct: "La coccia" }
+            ],
+            secondo: [
+                { question: "Secondo lo Statuto del CONI, le FSN sono associazioni senza fine di lucro con personalità giuridica di diritto privato. Sono ancora organi del CONI?", answers: ["Sì, lo Statuto non ha modificato questo aspetto", "Sì, ma solo per l'organizzazione delle Olimpiadi", "No, non sono più organi del CONI", "Solo per gli sport professionistici"], correct: "No, non sono più organi del CONI" },
+                { question: "Qual è uno degli obblighi per le ASD e SSD in regime L.398/91?", answers: ["Emettere fattura per tutte le entrate", "Tenere tutte le scritture contabili", "Numerare e conservare le fatture d'acquisto", "Avere un bilancio certificato da un revisore"], correct: "Numerare e conservare le fatture d'acquisto" },
+                { question: "A quali prestazioni sportive amatoriali si applica la normativa agevolativa dell'Art. 67 TUIR?", answers: ["Tutte le prestazioni, anche se retribuite", "Quelle che prevedono un corrispettivo per l'attività di addestramento", "Quelle che prevedono premi e compensi occasionali in relazione ai risultati ottenuti", "Tutte le prestazioni, a prescindere dal limite di reddito"], correct: "Quelle che prevedono premi e compensi occasionali in relazione ai risultati ottenuti" },
+                { question: "Quale delle seguenti non è una clausola statutaria necessaria per le ASD/SSD?", answers: ["Assenza di fini di lucro", "L'obbligo di devoluzione del patrimonio in caso di scioglimento", "L'iscrizione obbligatoria al Registro CONI", "L'obbligo di redazione di rendiconti economico-finanziari"], correct: "L'iscrizione obbligatoria al Registro CONI" },
+                { question: "Cosa si intende per 'colpo doppio' nella spada?", answers: ["Un errore di esecuzione che viene annullato", "Una stoccata che arriva con un tempo di ritardo", "Quando i due tiratori si toccano entro un intervallo di 1/20-1/25 di secondo", "Un attacco composto da due movimenti"], correct: "Quando i due tiratori si toccano entro un intervallo di 1/20-1/25 di secondo" },
+                { question: "Quali sono le due principali forme di apprendimento motorio secondo il trattato sulle Materie Generali?", answers: ["Apprendimento per intuizione e per imitazione", "Apprendimento per prove ed errori e per condizionamento", "Apprendimento per imitazione e per prove ed errori", "Apprendimento per comprensione e per intuizione"], correct: "Apprendimento per imitazione e per prove ed errori" },
+                { question: "Quale delle seguenti affermazioni sulla Frecciata nella spada è corretta?", answers: ["Si esegue sempre solo a ferro libero", "È un movimento di avanzata più rapido dell'affondo", "È efficace solo se eseguita a stretta misura", "Deve terminare con un passo avanti-affondo"], correct: "È un movimento di avanzata più rapido dell'affondo" },
+                { question: "Qual è una delle conseguenze del passaggio dell'Art. 4 del DPR 633/72 all'Art. 10?", answers: ["L'IVA non è più applicabile", "Le operazioni diventano esenti da IVA, ma assoggettate ad essa", "I proventi diventano completamente imponibili", "Non cambia nulla per le ASD/SSD"], correct: "Le operazioni diventano esenti da IVA, ma assoggettate ad essa" },
+                { question: "Cosa si intende per 'Scandaglio'?", answers: ["Una tecnica di attacco a sorpresa", "Un'azione di difesa che neutralizza l'attacco", "Uno studio di indagine per svelare il modo difensivo dell'avversario", "Il movimento di ritorno in guardia"], correct: "Uno studio di indagine per svelare il modo difensivo dell'avversario" },
+                { question: "Quale delle seguenti è una caratteristica del bersaglio valido nella sciabola?", answers: ["Solo il tronco", "Tutta la porzione del corpo situata al di sopra della linea che passa dalla sommità delle pieghe delle cosce", "Tutto il corpo", "Solo la testa e le braccia"], correct: "Tutta la porzione del corpo situata al di sopra della linea che passa dalla sommità delle pieghe delle cosce" }
+            ],
+            terzo: [
+                { question: "Il D.Lgs. 36/2021, a partire da quale data ha previsto l'abrogazione delle vecchie norme sul lavoro sportivo?", answers: ["1/1/2022", "31/8/2022", "1/1/2023", "1/1/2024"], correct: "1/1/2023" },
+                { question: "In quale fascia d'età si ha il 'periodo d'oro della motricità'?", answers: ["3-5 anni", "6-7 anni", "8-11 anni", "11-15 anni"], correct: "8-11 anni" },
+                { question: "Cosa si intende per 'seconda intenzione' in un assalto?", answers: ["Un attacco che realizza il colpo direttamente", "Un attacco che provoca la difesa avversaria per poi contrattaccare", "Un'azione di difesa che elude l'attacco", "Un attacco che usa un movimento di finta"], correct: "Un attacco che provoca la difesa avversaria per poi contrattaccare" },
+                { question: "Secondo il trattato del fioretto, la punta della lama deve superare di circa quante dita la coccia per essere considerata a 'giusta misura'?", answers: ["Due", "Quattro", "Sei", "Otto"], correct: "Quattro" },
+                { question: "Quale delle seguenti uscite in tempo è applicabile in contrapposizione a un attacco composto dell'avversario?", answers: ["La contrazione", "Il colpo d'arresto", "La cavazione in tempo", "La passata sotto"], correct: "Il colpo d'arresto" },
+                { question: "Cosa definisce l'atteggiamento di un tecnico come 'autenticità'?", answers: ["La capacità di accogliere i sentimenti personali dell'allievo", "Il farsi carico delle difficoltà dell'allievo", "Il manifestarsi per quello che è realmente, senza mascheramenti", "L'essere assertivo nel dialogo"], correct: "Il manifestarsi per quello che è realmente, senza mascheramenti" },
+                { question: "Cosa si intende per 'Traccheggio' nella scherma?", answers: ["L'attacco a sorpresa", "Il mutare più volte di invito o legamento per mascherare le proprie intenzioni", "L'uscita in tempo", "Un'azione di difesa passiva"], correct: "Il mutare più volte di invito o legamento per mascherare le proprie intenzioni" },
+                { question: "Quale dei seguenti è un principio fondamentale dell'allenamento?", answers: ["La supercompensazione è un mito", "La periodizzazione dell'allenamento", "L'allenamento deve essere sempre specifico", "L'allenamento deve essere unidirezionale"], correct: "La periodizzazione dell'allenamento" },
+                { question: "Quale delle seguenti affermazioni sulla 'Ripigliata' è corretta?", answers: ["È un'azione che ha inizio dalla guardia", "È una seconda azione di offesa che ha inizio dall'affondo", "È un attacco che elude una parata", "È un'azione che si esegue solo in frecciata"], correct: "È una seconda azione di offesa che ha inizio dall'affondo" },
+                { question: "Qual è la lunghezza massima consentita per una lama di spada?", answers: ["800 mm", "900 mm", "1000 mm", "1100 mm"], correct: "900 mm" }
+            ]
+        },
+        spada: {
+            primo: [
+                { question: "Nella spada, come si esegue il 'saluto'?", answers: ["Si punta la spada verso l'alto e si flette il braccio", "Si porta la spada in linea di offesa, si flette il braccio e poi lo si distende nuovamente", "Si esegue un affondo e si torna in guardia", "Si porta la spada dietro la schiena"], correct: "Si porta la spada in linea di offesa, si flette il braccio e poi lo si distende nuovamente" },
+                { question: "Qual è una delle posizioni di pugno fondamentali per uno spadista?", answers: ["Pugno di quinta", "Pugno di quarta, accentuando la posizione avanzata del braccio", "Pugno di prima, con la punta in alto", "Pugno di sesta, con la punta in basso"], correct: "Pugno di quarta, accentuando la posizione avanzata del braccio" },
+                { question: "Cosa si intende per 'Angolazione' nella spada?", answers: ["Un'azione che sfrutta una linea retta per colpire", "Un'azione offensiva che sfrutta l'angolo formato dall'avambraccio e la lama", "Un colpo al braccio con la punta in linea", "Una parata che si esegue con il pugno di seconda"], correct: "Un'azione offensiva che sfrutta l'angolo formato dall'avambraccio e la lama" },
+                { question: "Qual è la differenza tra 'passo avanti' e 'passo indietro'?", answers: ["Non ci sono differenze", "Il passo avanti si esegue con un salto, il passo indietro no", "Il passo avanti si esegue con il piede destro, il passo indietro con il sinistro", "Il passo avanti si esegue per diminuire la distanza, il passo indietro per aumentarla"], correct: "Il passo avanti si esegue per diminuire la distanza, il passo indietro per aumentarla" },
+                { question: "Cosa si intende per 'Linea di offesa'?", answers: ["La linea immaginaria di movimento", "Una linea retta formata dal braccio e dall'arma", "La linea di tiro diagonale", "La linea che divide in due il bersaglio"], correct: "Una linea retta formata dal braccio e dall'arma" },
+                { question: "Quale dei seguenti non è un tipo di misura didattica nella spada?", answers: ["Streta misura", "Da fermo", "A due passi", "Lunga misura"], correct: "A due passi" },
+                { question: "Cosa si intende per 'Legamento'?", answers: ["Un'azione che allontana il ferro avversario", "Lo spostamento del proprio ferro a contatto con quello avversario", "Una parata che elude l'attacco", "Una finta che porta a scoprire un bersaglio"], correct: "Lo spostamento del proprio ferro a contatto con quello avversario" },
+                { question: "Qual è il bersaglio valido nella scherma di spada?", answers: ["Solo il tronco", "La testa e le braccia", "Tutto il corpo, inclusi gli avancorpi", "Solo il petto e la schiena"], correct: "Tutto il corpo, inclusi gli avancorpi" },
+                { question: "Cos'è il 'Ritorno in guardia'?", answers: ["Il movimento che riporta il tiratore dall'affondo in guardia", "Un passo avanti e un affondo", "Un salto indietro", "Il movimento di preparazione prima dell'assalto"], correct: "Il movimento che riporta il tiratore dall'affondo in guardia" },
+                { question: "La 'Guardia' nella spada, rispetto a quella del fioretto, come deve essere?", answers: ["Più eretta e con minore apertura delle gambe", "Più bassa e con maggiore apertura delle gambe", "Identica a quella del fioretto", "Con il braccio armato più piegato"], correct: "Più eretta e con minore apertura delle gambe" }
+            ],
+            secondo: [
+                { question: "Cosa si intende per 'Punta d'arresto' nella spada elettrica?", answers: ["La parte della lama che non può essere affilata", "Un componente che richiede una pressione minima di 750gr per scattare", "Un componente che ha un diametro di 6mm", "La parte finale della lama che non ha fili conduttori"], correct: "Un componente che richiede una pressione minima di 750gr per scattare" },
+                { question: "Cos'è il 'Traccheggio'?", answers: ["Il mutare più volte d'invito o legamento per nascondere le proprie intenzioni", "Un attacco di seconda intenzione", "Un'azione di difesa per eludere l'attacco", "Il movimento di ritorno in guardia"], correct: "Il mutare più volte d'invito o legamento per nascondere le proprie intenzioni" },
+                { question: "Quale delle seguenti affermazioni sulla 'Frecciata' è corretta?", answers: ["Si esegue sempre con un passo avanti-affondo", "È un movimento di avanzata più rapido dell'affondo", "Il colpo in frecciata più sicuro è quello a ferro libero", "Il corpo va proiettato all'indietro"], correct: "È un movimento di avanzata più rapido dell'affondo" },
+                { question: "Cosa si intende per 'Finta in tempo'?", answers: ["Un colpo d'arresto eseguito sul tempo perso dell'avversario", "Un colpo simulato per indurre l'avversario a parare", "Un colpo che si esegue in contropiede", "L'elusione di un attacco avversario con un colpo d'arresto"], correct: "Un colpo simulato per indurre l'avversario a parare" },
+                { question: "Qual è la migliore azione di difesa per la spada, secondo il trattato?", answers: ["La parata di contro", "Il salto indietro", "L'arresto, sia diretto che di contrazione", "Il legamento"], correct: "L'arresto, sia diretto che di contrazione" },
+                { question: "Cosa si intende per 'Ripresa d'attacco'?", answers: ["Una nuova azione offensiva che si esegue dall'affondo", "Il ritorno in guardia dopo un attacco", "Un attacco composto da due movimenti", "L'elusione di un attacco avversario"], correct: "Una nuova azione offensiva che si esegue dall'affondo" },
+                { question: "Quale delle seguenti è un'azione controffensiva?", answers: ["La parata", "La risposta", "L'affondo", "Il salto indietro"], correct: "La risposta" },
+                { question: "Cos'è la 'Ceduta'?", answers: ["Un'azione offensiva che si applica quando il proprio ferro è sottomesso", "Un tipo di parata che si esegue senza resistere all'azione avversaria", "Un colpo di angolazione al braccio", "Una parata di contro"], correct: "Un'azione offensiva che si applica quando il proprio ferro è sottomesso" },
+                { question: "In quale parte dell'arma si trova il 'ricasso'?", answers: ["Alla punta della lama", "Nel manico", "Nella parte interna della coccia", "Alla base della lama, vicino alla coccia"], correct: "Alla base della lama, vicino alla coccia" },
+                { question: "Cosa si intende per 'trasporto di ferro'?", answers: ["Un'azione che si esegue senza lasciare la lama avversaria", "Un'azione che si esegue con un movimento circolare", "Un colpo d'arresto con opposizione", "Una finta di filo con cavazione"], correct: "Un'azione che si esegue senza lasciare la lama avversaria" }
+            ],
+            terzo: [
+                { question: "Cosa si intende per 'Controtempo' nella spada?", answers: ["Una stoccata che arriva contemporaneamente a quella dell'avversario", "La contraria degli arresti dell'avversario", "Un attacco in seconda intenzione", "Un'azione di difesa che si basa sulla parata"], correct: "La contraria degli arresti dell'avversario" },
+                { question: "Quale azione si può usare per neutralizzare una 'schivata' dell'avversario?", answers: ["La parata di contro", "Una ripresa d'attacco", "L'affondo", "Il traccheggio"], correct: "Una ripresa d'attacco" },
+                { question: "Come si esegue una 'Ripresa di attacco di allungo'?", answers: ["Tornando in guardia con un passo indietro e poi attaccando con un affondo", "Rimanendo in affondo e vibrando un nuovo colpo", "Tornando in guardia con il piede sinistro e poi attaccando con un passo avanti-affondo", "Senza tornare in guardia, con una frecciata"], correct: "Tornando in guardia con il piede sinistro e poi attaccando con un passo avanti-affondo" },
+                { question: "Cos'è la 'Terza intenzione'?", answers: ["Un attacco che elude la seconda intenzione dell'avversario", "Un'azione di difesa che neutralizza un colpo doppio", "Un attacco che si esegue con tre movimenti", "La prima azione in un assalto"], correct: "Un attacco che elude la seconda intenzione dell'avversario" },
+                { question: "Qual è il principale scopo di un 'filo'?", answers: ["Deviare l'arma avversaria con un urto", "Mantenere il contatto con la lama avversaria per dominare il ferro", "Simulare un attacco per indurre l'avversario alla parata", "Neutralizzare un'uscita in tempo"], correct: "Mantenere il contatto con la lama avversaria per dominare il ferro" },
+                { question: "Quali sono gli 'atteggiamenti fondamentali' che uno schermidore può assumere?", answers: ["Parata, controparata, riposta", "Attacco, finta, rimesse", "Arma in linea, invito, legamento", "Affondo, ritorno, ripresa d'attacco"], correct: "Arma in linea, invito, legamento" },
+                { question: "Cosa si intende per 'Giudizio del colpo doppio' nella spada?", answers: ["L'annullamento di entrambe le stoccate", "L'assegnazione della stoccata a chi ha attaccato per primo", "L'assegnazione di una stoccata a entrambi i tiratori, a meno che non ci sia una differenza di tempo apprezzabile", "L'assegnazione della stoccata a chi ha eseguito la parata"], correct: "L'assegnazione di una stoccata a entrambi i tiratori, a meno che non ci sia una differenza di tempo apprezzabile" },
+                { question: "Come si può ottenere un 'disarmo'?", answers: ["Con un attacco in tempo al braccio", "Con una battuta energica sulla lama avversaria in senso opposto alla mano", "Con un colpo di angolazione al polso", "Con una parata di ceduta"], correct: "Con una battuta energica sulla lama avversaria in senso opposto alla mano" },
+                { question: "Quali sono i quattro 'quadranti del bersaglio' nella spada?", answers: ["Fronte, retro, sinistra, destra", "Alto, basso, interno, esterno", "Testa, tronco, braccia, gambe", "Petto, addome, schiena, fianchi"], correct: "Alto, basso, interno, esterno" },
+                { question: "Qual è la differenza principale tra 'finta' e 'doppia finta'?", answers: ["La finta è un colpo simulato, la doppia finta è un colpo reale", "La finta è un attacco di seconda intenzione, la doppia finta no", "La finta elude una parata, la doppia finta ne elude due", "La finta si esegue da fermo, la doppia finta in movimento"], correct: "La finta elude una parata, la doppia finta ne elude due" }
+            ]
+        },
+        fioretto: {
+            primo: [
+                { question: "Qual è il peso massimo consentito per il fioretto?", answers: ["500 grammi", "770 grammi", "1100 grammi", "880 mm"], correct: "500 grammi" },
+                { question: "Quale delle seguenti parti è esclusiva del fioretto italiano rispetto a quello francese o ortopedico?", answers: ["La lama", "Il manico", "Il gavigliano e gli archetti d'unione", "La coccia"], correct: "Il gavigliano e gli archetti d'unione" },
+                { question: "Quale posizione di pugno nel fioretto è considerata solo teorica e non ha un impiego pratico?", answers: ["Seconda", "Terza", "Quarta", "Prima"], correct: "Prima" },
+                { question: "Cos'è il 'bersaglio valevole' nel fioretto?", answers: ["Tutto il corpo", "Il tronco, escluse le braccia fino alla spalla", "Solo la testa", "Il tronco, incluse le braccia"], correct: "Il tronco, escluse le braccia fino alla spalla" },
+                { question: "Cosa si intende per 'Azione di finta semplice'?", answers: ["Un'azione che elude una sola parata", "Un'azione che elude due parate", "Un'azione che si esegue con un solo movimento", "Un colpo diretto al bersaglio"], correct: "Un'azione che elude una sola parata" },
+                { question: "Quale azione si esegue per portarsi a 'misura camminando'?", answers: ["Il salto indietro", "Il raddoppio", "Il passo avanti-affondo", "Il passo avanti"], correct: "Il passo avanti-affondo" },
+                { question: "Quale azione si esegue in contrapposizione a un 'legamento' avversario?", answers: ["Il colpo dritto", "La battuta", "La cavazione", "Il filo"], correct: "La cavazione" },
+                { question: "Cosa si intende per 'Ripresa d'attacco di allungo'?", answers: ["Una seconda azione di offesa dall'affondo", "Un nuovo attacco dopo un passo avanti-affondo", "Una nuova azione di offesa dopo il ritorno in guardia", "Un attacco composto da due movimenti"], correct: "Una nuova azione di offesa dopo il ritorno in guardia" },
+                { question: "Cos'è la 'Passata sotto'?", answers: ["Un tipo di parata di ceduta", "Un'azione che si esegue contro le azioni di filo", "Un'uscita in tempo che si applica contro le azioni che terminano sopra al petto", "Un'azione di difesa che elude l'attacco dell'avversario con un salto"], correct: "Un'uscita in tempo che si applica contro le azioni che terminano sopra al petto" },
+                { question: "Cosa si intende per 'Tempo schermistico'?", answers: ["La durata minima di un assalto", "La precedenza di un colpo sull'altro", "L'apprezzabilità di tempo che intercorre tra offesa e controffesa per la validità del colpo", "Il tempo impiegato per eseguire un'azione"], correct: "L'apprezzabilità di tempo che intercorre tra offesa e controffesa per la validità del colpo" }
+            ],
+            secondo: [
+                { question: "Cosa si intende per 'Invito di terza' nel fioretto?", answers: ["Un atteggiamento che scopre il bersaglio esterno del petto", "Un atteggiamento che scopre il bersaglio interno del petto", "Un atteggiamento che scopre il fianco", "Un atteggiamento con la punta in alto"], correct: "Un atteggiamento che scopre il bersaglio interno del petto" },
+                { question: "Quale azione si esegue in contrapposizione a un 'colpo dritto'?", answers: ["Una parata di tasto", "Un affondo", "Una cavazione", "Una battuta"], correct: "Una parata di tasto" },
+                { question: "Quale delle seguenti è un'azione 'di contro'?", answers: ["La parata semplice", "La parata di ceduta", "La controcavazione", "Il colpo d'arresto"], correct: "La controcavazione" },
+                { question: "Quale delle seguenti non è una delle fasi dell'apprendimento motorio secondo il modello Fitts e Posner?", answers: ["Fase cognitiva", "Fase associativa", "Fase di comprensione", "Fase autonoma"], correct: "Fase di comprensione" },
+                { question: "Quale azione si esegue per neutralizzare l'azione avversaria non avvalendosi della parata?", answers: ["La risposta", "L'uscita in tempo", "L'attacco composto", "Il filo"], correct: "L'uscita in tempo" },
+                { question: "In un'azione di doppia finta, quanti movimenti eludono la parata?", answers: ["Uno", "Due", "Tre", "Nessuno"], correct: "Due" },
+                { question: "Cos'è l'imbroccata?", answers: ["Un'uscita in tempo contro le azioni di filo che terminano al fianco", "Una parata che si esegue con il pugno di terza", "Un attacco composto da una finta e una battuta", "Il movimento di ritorno in guardia"], correct: "Un'uscita in tempo contro le azioni di filo che terminano al fianco" },
+                { question: "Quando si può dire che un attacco è stato eseguito a 'propria scelta di tempo'?", answers: ["Quando avviene nel momento in cui l'avversario sta per iniziare un'azione", "Quando si attua in contrapposizione a un atteggiamento già precisato dall'avversario", "Quando si esegue a ferro libero", "Quando si usa un'azione di finta"], correct: "Quando si attua in contrapposizione a un atteggiamento già precisato dall'avversario" },
+                { question: "Qual è la lunghezza massima totale del fioretto, dalla punta all'estremità del pomolo?", answers: ["900 mm", "1000 mm", "1100 mm", "1200 mm"], correct: "1100 mm" },
+                { question: "Cosa si intende per 'Disarmo'?", answers: ["Un attacco di filo con angolazione", "Una battuta che fa perdere il controllo dell'arma all'avversario", "Una parata di contro che elude l'attacco", "Un attacco in frecciata"], correct: "Una battuta che fa perdere il controllo dell'arma all'avversario" }
+            ],
+            terzo: [
+                { question: "Qual è la differenza tra 'fili' e 'battute'?", answers: ["I fili si basano sul contatto continuo, le battute su un urto secco", "I fili si eseguono solo di punta, le battute di taglio", "I fili sono azioni semplici, le battute sono composte", "I fili si usano contro l'arma in linea, le battute contro gli inviti"], correct: "I fili si basano sul contatto continuo, le battute su un urto secco" },
+                { question: "Cosa si intende per 'secondo colpo'?", answers: ["Il secondo movimento di un attacco composto", "Un'azione che ha inizio da una posizione di affondo", "Un attacco di raddoppio", "Una risposta composta da due parate"], correct: "Un'azione che ha inizio da una posizione di affondo" },
+                { question: "Quale delle seguenti affermazioni sulla 'Ripresa d'attacco' è corretta?", answers: ["È un'azione che ha inizio dalla guardia, dopo essere tornati dall'affondo", "È un attacco eseguito in frecciata", "È il secondo colpo di un attacco composto", "È un'azione che si esegue da una posizione di parata"], correct: "È un'azione che ha inizio dalla guardia, dopo essere tornati dall'affondo" },
+                { question: "Qual è il bersaglio valido nel fioretto?", answers: ["Tutto il corpo", "Il tronco, incluse le braccia", "Il tronco, escluse le braccia fino alla linea che congiunge la punta dei rispettivi omeri ed ascella", "Solo il petto"], correct: "Il tronco, escluse le braccia fino alla linea che congiunge la punta dei rispettivi omeri ed ascella" },
+                { question: "Cosa si intende per 'Traccheggio'?", answers: ["Un attacco che si basa su una finta", "Un insieme di movimenti per mascherare le proprie intenzioni", "Un'azione di difesa passiva", "Un colpo d'arresto in tempo"], correct: "Un insieme di movimenti per mascherare le proprie intenzioni" },
+                { question: "Come si esegue il 'Saluto' nel fioretto?", answers: ["Si punta la spada verso il basso e si flette il braccio", "Si porta il fioretto in linea, si flette il braccio e si distende nuovamente", "Si esegue un affondo e si torna in guardia", "Si porta la spada dietro la schiena"], correct: "Si porta il fioretto in linea, si flette il braccio e si distende nuovamente" },
+                { question: "Come si esegue una parata di ceduta nel fioretto?", answers: ["Assecondando l'azione di filo avversaria senza interrompere il contatto", "Con un movimento circolare e un urto secco", "Con un passo avanti e un affondo", "Con il pugno di quarta"], correct: "Assecondando l'azione di filo avversaria senza interrompere il contatto" },
+                { question: "Qual è la differenza tra 'passo avanti' e 'passo indietro'?", answers: ["Il passo avanti si esegue per diminuire la distanza, il passo indietro per aumentarla", "Il passo avanti si esegue con il piede destro, il passo indietro con il sinistro", "Non ci sono differenze", "Il passo avanti si esegue con un affondo, il passo indietro con un salto"], correct: "Il passo avanti si esegue per diminuire la distanza, il passo indietro per aumentarla" },
+                { question: "Cos'è la 'Contrazione'?", answers: ["Una parata che si esegue con il pugno di terza", "Un colpo in tempo vibrato sul movimento finale dell'attacco avversario", "Un attacco di seconda intenzione", "Un'azione di difesa che elude l'attacco dell'avversario con un salto"], correct: "Un colpo in tempo vibrato sul movimento finale dell'attacco avversario" },
+                { question: "In quale parte della lama si trova il 'ricasso'?", answers: ["Alla punta della lama", "Nella parte che sta infilata nel manico", "Alla base della lama, che si adatta fra la coccia e il gavigliano", "Nel pomolo"], correct: "Alla base della lama, che si adatta fra la coccia e il gavigliano" }
+            ]
+        },
+        sciabola: {
+            primo: [
+                { question: "Con quale parte della lama si può colpire nella sciabola?", answers: ["Solo di punta", "Di punta, di taglio e di controtaglio", "Solo di taglio", "Solo di punta e di taglio"], correct: "Di punta, di taglio e di controtaglio" },
+                { question: "Come si impugna la sciabola per avere un punto di appoggio sicuro?", answers: ["Con il dito indice allungato sulla lama", "Con il pollice a contatto con la coccia", "Facendo poggiare la parte inferiore del manico sull'eminenza ipotenare della mano", "Con il pugno di terza posizione"], correct: "Facendo poggiare la parte inferiore del manico sull'eminenza ipotenare della mano" },
+                { question: "Qual è il bersaglio valido nella sciabola?", answers: ["Solo il tronco", "Tutta la porzione del corpo al di sopra delle pieghe delle cosce", "Tutto il corpo", "Solo la testa e le braccia"], correct: "Tutta la porzione del corpo al di sopra delle pieghe delle cosce" },
+                { question: "Quale parata di sciabola è da preferirsi perché offre garanzie per il braccio e rende più agevole il disimpegno della spalla?", answers: ["Quinta", "Terza", "Prima", "Sesta"], correct: "Terza" },
+                { question: "Qual è l'obiettivo del 'molinello'?", answers: ["Deviare l'arma avversaria con un urto", "Eseguire un movimento di punta", "Vibrare determinati colpi di taglio con movimenti circolari", "Tornare in guardia dopo l'affondo"], correct: "Vibrare determinati colpi di taglio con movimenti circolari" },
+                { question: "Cosa si intende per 'Fendente (coupé)'?", answers: ["Una sciabolata che si esegue con un movimento circolare", "Una sciabolata alla testa dopo aver svincolato la lama da un legamento", "Una sciabolata al fianco", "Una puntata diretta"], correct: "Una sciabolata alla testa dopo aver svincolato la lama da un legamento" },
+                { question: "Cos'è la 'Puntata di cavazione'?", answers: ["Un colpo di punta in contrapposizione a un legamento avversario", "Un colpo di taglio al bersaglio", "Un colpo di punta che si esegue con un molinello", "Un attacco diretto al braccio"], correct: "Un colpo di punta in contrapposizione a un legamento avversario" },
+                { question: "Come viene eseguito un 'filo di terza'?", answers: ["Si fa scorrere la lama su quella avversaria per colpire il fianco", "Si fa scorrere la lama su quella avversaria per colpire il bersaglio esterno del petto", "Si fa scorrere la lama per colpire la testa", "Si esegue un molinello al petto"], correct: "Si fa scorrere la lama su quella avversaria per colpire il bersaglio esterno del petto" },
+                { question: "Cosa si intende per 'Traccheggio'?", answers: ["Un attacco di seconda intenzione", "Un attacco di prima intenzione", "Un insieme di movimenti per mascherare le proprie intenzioni", "Un'uscita in tempo"], correct: "Un insieme di movimenti per mascherare le proprie intenzioni" },
+                { question: "Qual è il peso massimo consentito per la sciabola?", answers: ["500 gr", "770 gr", "880 mm", "1050 mm"], correct: "500 gr" }
+            ],
+            secondo: [
+                { question: "Quale delle seguenti non è una delle sei parate semplici di sciabola?", answers: ["Quarta", "Quinta", "Settima", "Terza"], correct: "Settima" },
+                { question: "Cosa si intende per 'Parate di ceduta'?", answers: ["Parate che si eseguono senza resistere al movimento della lama avversaria", "Parate che si eseguono con un urto secco", "Parate che si eseguono con un movimento circolare", "Parate che si eseguono solo di punta"], correct: "Parate che si eseguono senza resistere al movimento della lama avversaria" },
+                { question: "Quale azione si esegue per portarsi a 'misura camminando'?", answers: ["La frecciata", "Il salto indietro", "Il passo avanti-affondo", "Il raddoppio"], correct: "Il passo avanti-affondo" },
+                { question: "Cosa si intende per 'Contrazione'?", answers: ["Un attacco composto", "Una puntata in tempo vibrata sul movimento finale dell'attacco avversario", "Un'azione di difesa che elude l'attacco dell'avversario con un salto", "Una parata di contro"], correct: "Una puntata in tempo vibrata sul movimento finale dell'attacco avversario" },
+                { question: "In quale fascia d'età si ha il 'periodo d'oro della motricità'?", answers: ["3-5 anni", "6-7 anni", "8-11 anni", "11-15 anni"], correct: "8-11 anni" },
+                { question: "Quale dei seguenti è un requisito indispensabile per un attacco in frecciata?", answers: ["Il movimento delle gambe deve essere lento e controllato", "L'arma deve essere portata all'indietro per bilanciare il corpo", "Il minimo cenno di titubanza per non compromettere l'azione", "La massima decisione"], correct: "La massima decisione" },
+                { question: "Cos'è la 'cavazione in tempo'?", answers: ["Un attacco di finta che elude una parata", "Un'uscita in tempo che si applica contro le azioni che hanno inizio sul ferro contrario", "Un colpo d'arresto al braccio", "Un'azione di difesa passiva"], correct: "Un'uscita in tempo che si applica contro le azioni che hanno inizio sul ferro contrario" },
+                { question: "Qual è la lunghezza totale massima della sciabola?", answers: ["1050 mm", "880 mm", "1200 mm", "1500 mm"], correct: "1050 mm" },
+                { question: "Cosa si intende per 'tempo schermistico'?", answers: ["La durata di un colpo semplice", "L'apprezzabilità di tempo che deve intercorrere tra offesa e controffesa per la validità del colpo", "Il tempo minimo per eseguire un'azione", "La durata massima di un assalto"], correct: "L'apprezzabilità di tempo che deve intercorrere tra offesa e controffesa per la validità del colpo" },
+                { question: "Quale delle seguenti affermazioni sulla 'finta' è corretta?", answers: ["È un colpo reale mascherato", "È un movimento che ha lo scopo di allontanare l'avversario", "È la simulazione di un colpo che serve a indurre l'avversario alla parata", "È un'azione di difesa"], correct: "È la simulazione di un colpo che serve a indurre l'avversario alla parata" }
+            ],
+            terzo: [
+                { question: "In quale posizione di pugno il taglio della lama è rivolto in alto?", answers: ["Prima", "Seconda", "Terza", "Quarta"], correct: "Prima" },
+                { question: "Qual è la differenza tra un'azione di offesa 'a propria scelta di tempo' e una 'in tempo'?", answers: ["L'azione a scelta di tempo avviene in contrapposizione a un atteggiamento già definito, l'azione in tempo avviene nel medesimo istante in cui l'atteggiamento si delinea", "L'azione a scelta di tempo si esegue con la frecciata, l'azione in tempo con l'affondo", "L'azione a scelta di tempo si esegue senza la battuta, l'azione in tempo con la battuta", "Non ci sono differenze"], correct: "L'azione a scelta di tempo avviene in contrapposizione a un atteggiamento già definito, l'azione in tempo avviene nel medesimo istante in cui l'atteggiamento si delinea" },
+                { question: "Qual è lo scopo del 'passo avanti-affondo'?", answers: ["Portarsi fuori misura dall'avversario", "Eseguire un attacco in frecciata", "Sviluppare un attacco a misura camminando", "Eseguire una parata"], correct: "Sviluppare un attacco a misura camminando" },
+                { question: "Come si esegue una 'Ripresa d'attacco di allungo'?", answers: ["Tornando in guardia con il piede sinistro e poi espletando un affondo", "Rimanendo in affondo e vibrando un nuovo colpo", "Tornando in guardia con un passo indietro", "Espletando una frecciata dalla posizione di affondo"], correct: "Tornando in guardia con il piede sinistro e poi espletando un affondo" },
+                { question: "Qual è il 'tempo' schermistico di un'azione di doppia finta?", answers: ["Un tempo", "Due tempi", "Tre tempi", "Dipende dalla velocità"], correct: "Tre tempi" },
+                { question: "Cos'è una 'battuta di passaggio'?", answers: ["Una battuta che elude la lama contraria strisciando dall'avanti all'indietro", "Una battuta che si esegue con un urto secco", "Una battuta che si esegue con il dorso della lama", "Una battuta che si esegue con un molinello"], correct: "Una battuta che elude la lama contraria strisciando dall'avanti all'indietro" },
+                { question: "Quali sono le azioni d'offesa più difficili da realizzare in sciabola?", answers: ["Puntate dirette", "Sciabolate dirette", "Puntate di filo", "Colpi di controtaglio"], correct: "Colpi di controtaglio" },
+                { question: "Qual è il peso ideale per la sciabola?", answers: ["Il centro di gravità è a circa 5cm dalla coccia", "500 grammi esatti", "880 mm", "1050 mm"], correct: "Il centro di gravità è a circa 5cm dalla coccia" },
+                { question: "Come si esegue una 'Contrazione' al fianco?", answers: ["Vibrando una puntata al petto dell'avversario", "Vibrando una puntata al fianco dell'avversario per guadagnare i gradi della lama", "Eseguendo una parata di ceduta", "Tornando in guardia con un passo indietro"], correct: "Vibrando una puntata al fianco dell'avversario per guadagnare i gradi della lama" },
+                { question: "Cosa si intende per 'Esercizio di attrito prolungato'?", answers: ["Un assalto libero senza regole", "Un esercizio di allenamento che si basa su una serie di parate e risposte a breve distanza", "Un esercizio che si basa su una finta e una contrazione", "Un esercizio che si esegue solo in frecciata"], correct: "Un esercizio che si basa su una serie di parate e risposte a breve distanza" }
+            ]
+        },
+        paralimpica: {
+            primo: [
+                { question: "Quali sono le categorie nella scherma paralimpica?", answers: ["Categoria A, B, C", "Categoria 1, 2, 3", "Categoria B, D, G", "Categoria F, P, S"], correct: "Categoria A, B, C" },
+                { question: "Quanto sono ruotate le carrozzine da scherma, rispetto alla linea direttrice della pedana?", answers: ["20°", "45°", "90°", "Non sono ruotate"], correct: "45°" },
+                { question: "Qual è il bersaglio valido nella spada in carrozzina?", answers: ["Solo le braccia e il busto", "Tutto il corpo, comprese le gambe, tranne la carrozzina", "Solo il tronco", "La carrozzina e il busto"], correct: "Tutto il corpo, comprese le gambe, tranne la carrozzina" },
+                { question: "Qual è l'altezza massima della seduta della carrozzina da scherma dal pavimento?", answers: ["45 cm", "50 cm", "53 cm", "60 cm"], correct: "53 cm" },
+                { question: "Che cos’è la parannanza?", answers: ["Il busto di un atleta", "La parte che copre le gambe", "L'attacco a sorpresa", "Un'azione di difesa"], correct: "La parte che copre le gambe" },
+                { question: "Esistono le gare a squadre nella scherma in carrozzina?", answers: ["Sì", "No", "Solo per alcune categorie", "Solo per la spada"], correct: "Sì" },
+                { question: "A che categoria di scherma non vedenti appartengono gli atleti che hanno bisogno di un assistente per colpire?", answers: ["Categoria 1", "Categoria 2", "Categoria 3", "Nessuna delle precedenti"], correct: "Categoria 1" },
+                { question: "Quali sono gli accessori aggiunti per praticare la scherma non vedenti?", answers: ["Una pedana speciale e una carrozzina", "Una maschera con visiera oscurata", "Un'arma con una lama più lunga", "Un segnale acustico e una pedana speciale"], correct: "Un segnale acustico e una pedana speciale" },
+                { question: "Quanto dura il TIMEOUT nella scherma non vedenti?", answers: ["30 secondi", "60 secondi", "90 secondi", "120 secondi"], correct: "60 secondi" },
+                { question: "Cosa succede se il tecnico dà indicazioni al suo atleta durante l’assalto ma al di fuori del TIMEOUT?", answers: ["L'atleta viene squalificato", "L'atleta riceve un cartellino giallo", "L'atleta non riceve penalità", "L'atleta riceve un cartellino rosso"], correct: "L'atleta riceve un cartellino giallo" }
+            ],
+            secondo: [
+                { question: "Qual è la durata di un TIMEOUT nella scherma non vedenti?", answers: ["10 secondi", "30 secondi", "60 secondi", "120 secondi"], correct: "60 secondi" },
+                { question: "Quante volte si può chiedere il TIMEOUT nella scherma non vedenti?", answers: ["Una volta per ogni assalto", "Una volta per ogni gara", "Non c'è un limite", "Due volte per ogni assalto"], correct: "Una volta per ogni assalto" },
+                { question: "Cosa succede se il tecnico dà indicazioni al suo atleta al di fuori del TIMEOUT?", answers: ["L'atleta viene squalificato", "Il tecnico viene espulso", "L'atleta riceve una sanzione", "Non succede nulla"], correct: "L'atleta riceve una sanzione" },
+                { question: "Qual è la differenza tra azione attiva e passiva nella scherma non vedenti?", answers: ["L'azione attiva è un attacco, quella passiva è una parata", "L'azione attiva è l'attacco dell'atleta, quella passiva è l'attesa di una risposta", "L'azione attiva è la fase di attacco dell'atleta, quella passiva è quando l'atleta tocca la pedana", "L'azione attiva è un'azione con la spada, quella passiva con il fioretto"], correct: "L'azione attiva è la fase di attacco dell'atleta, quella passiva è quando l'atleta tocca la pedana" },
+                { question: "È possibile fare la fleché nella scherma non vedenti?", answers: ["No, è vietato", "Sì, ma solo con il fioretto", "Sì, ma solo con la spada", "Sì, è consentito"], correct: "No, è vietato" },
+                { question: "In che anno la FIS ha integrato la scherma in carrozzina nella propria attività?", answers: ["1970", "1993", "2000", "2010"], correct: "1993" },
+                { question: "Gli atleti della categoria inferiori, possono partecipare alle competizioni delle categorie superiori?", answers: ["Sì, ma solo se autorizzati dall'arbitro", "Sì, è consentito", "No, è vietato", "Solo nelle gare a squadre"], correct: "Sì, è consentito" },
+                { question: "Qual è l'altezza minima dello schienale della carrozzina da scherma?", answers: ["15 cm", "20 cm", "25 cm", "30 cm"], correct: "15 cm" },
+                { question: "Come si prende la misura in carrozzina?", answers: ["Senza differenza tra armi convenzionali e non", "Con la frecciata", "Toccando la pedana", "Con una differenza tra armi convenzionali e non"], correct: "Con una differenza tra armi convenzionali e non" },
+                { question: "Quando è stato attribuito il primo titolo italiano di scherma non vedenti?", answers: ["2005", "2010", "2015", "2020"], correct: "2010" }
+            ],
+            terzo: [
+                { question: "Cos'è la 'parannanza' nella scherma in carrozzina?", answers: ["Un tipo di parata", "Un'azione di attacco", "La parte che copre le gambe", "La seduta della carrozzina"], correct: "La parte che copre le gambe" },
+                { question: "Qual è l'altezza massima della seduta della carrozzina dal pavimento?", answers: ["53 cm", "60 cm", "70 cm", "80 cm"], correct: "53 cm" },
+                { question: "Quanto dura il 'TIMEOUT' nella scherma non vedenti?", answers: ["30 secondi", "60 secondi", "90 secondi", "120 secondi"], correct: "60 secondi" },
+                { question: "È possibile fare una gara di scherma in carrozzina senza essere classificati?", answers: ["Sì, è possibile", "No, non è possibile", "Solo per gli atleti di categoria C", "Solo se autorizzati dall'arbitro"], correct: "No, non è possibile" },
+                { question: "In che anno la FIS ha integrato la scherma in carrozzina nella propria attività?", answers: ["1980", "1993", "2000", "2010"], correct: "1993" },
+                { question: "Come si eseguono i passi avanti e i passi indietro nella scherma in carrozzina?", answers: ["L'atleta si sposta con la carrozzina", "Non si eseguono", "L'atleta si spinge con le mani", "Si usano le gambe"], correct: "Non si eseguono" },
+                { question: "Quando è valida l'azione nella scherma non vedenti?", answers: ["Quando l'atleta tocca la pedana", "Quando l'arbitro decide che è valida", "Quando l'atleta tocca l'avversario", "Quando l'avversario esce dalla pedana"], correct: "Quando l'atleta tocca l'avversario" },
+                { question: "Gli atleti sono obbligati a stare con entrambi i piedi sulla striscia nella scherma non vedenti?", answers: ["Sì", "No", "Solo con il piede dominante", "Solo durante l'attacco"], correct: "Sì" },
+                { question: "Quando l'arbitro comunica il tempo trascorso durante l'assalto?", answers: ["Ogni 10 secondi", "Ogni 30 secondi", "Ogni minuto", "Quando lo ritiene opportuno"], correct: "Ogni minuto" },
+                { question: "Quale delle seguenti è una sanzione per l'uscita laterale dalla striscia nella scherma non vedenti?", answers: ["Un punto di penalità", "Un cartellino giallo", "L'esclusione dall'assalto", "Non c'è una sanzione specifica"], correct: "Un cartellino giallo" }
+            ]
+        },
+    };
+
+    const examLevel = document.getElementById('examLevel');
+    const weaponType = document.getElementById('weaponType');
+    const quizSection = document.getElementById('quizSection');
+    const quizForm = document.getElementById('quizForm');
+    const submitButton = document.getElementById('submitButton');
+    const resultContainer = document.getElementById('resultContainer');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const restartButton = document.getElementById('restartButton');
+    const userNameInput = document.getElementById('userName');
+
+    let currentQuestions = [];
+
+    // Listener for dropdowns
+    examLevel.addEventListener('change', updateQuizSection);
+    weaponType.addEventListener('change', updateQuizSection);
+
+    function updateQuizSection() {
+        if (examLevel.value && weaponType.value) {
+            loadQuiz();
+            quizSection.classList.remove('hidden');
+        } else {
+            quizSection.classList.add('hidden');
+        }
+    }
+
+    function loadQuiz() {
+        const level = examLevel.value;
+        const weapon = weaponType.value;
+        const allQuestions = quizData[weapon][level];
+
+        if (!allQuestions) {
+            quizForm.innerHTML = `<p class="text-red-500">Nessuna domanda disponibile per questa combinazione.</p>`;
+            submitButton.classList.add('hidden');
+            return;
+        }
+
+        currentQuestions = shuffleArray(allQuestions).slice(0, 10);
+        renderQuestions();
+        submitButton.classList.remove('hidden');
+    }
+
+    function shuffleArray(array) {
+        const shuffled = [...array];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled;
+    }
+
+    function renderQuestions() {
+        quizForm.innerHTML = '';
+        currentQuestions.forEach((q, index) => {
+            const questionElement = document.createElement('div');
+            questionElement.classList.add('space-y-2', 'p-4', 'bg-gray-50', 'rounded-lg', 'border', 'border-gray-200');
+            
+            const questionTitle = document.createElement('p');
+            questionTitle.classList.add('font-semibold', 'text-gray-800');
+            questionTitle.textContent = `${index + 1}. ${q.question}`;
+            questionElement.appendChild(questionTitle);
+            
+            const shuffledAnswers = shuffleArray(q.answers);
+            
+            shuffledAnswers.forEach(answer => {
+                const label = document.createElement('label');
+                label.classList.add('block', 'flex', 'items-center', 'space-x-2', 'text-gray-600', 'cursor-pointer');
+                
+                const radio = document.createElement('input');
+                radio.type = 'radio';
+                radio.name = `question${index}`;
+                radio.value = answer;
+                radio.classList.add('form-radio', 'text-blue-600');
+                
+                const span = document.createElement('span');
+                span.textContent = answer;
+                
+                label.appendChild(radio);
+                label.appendChild(span);
+                questionElement.appendChild(label);
+            });
+            quizForm.appendChild(questionElement);
+        });
+    }
+
+    submitButton.addEventListener('click', checkAnswers);
+
+    function checkAnswers() {
+        const userName = userNameInput.value.trim();
+        if (!userName) {
+            alert("Per favore, inserisci il tuo nome per procedere.");
+            return;
+        }
+
+        let score = 0;
+        let incorrectAnswers = [];
+
+        currentQuestions.forEach((q, index) => {
+            const selected = document.querySelector(`input[name="question${index}"]:checked`);
+            if (selected && selected.value === q.correct) {
+                score++;
+            } else {
+                incorrectAnswers.push({
+                    question: q.question,
+                    correct: q.correct,
+                    userAnswer: selected ? selected.value : 'Nessuna risposta'
+                });
+            }
+        });
+
+        const percentage = (score / 10) * 100;
+        let resultText = `Hai risposto correttamente a ${score} su 10 domande. (${percentage}%)`;
+
+        scoreDisplay.textContent = resultText;
+        resultContainer.classList.remove('hidden');
+        quizSection.classList.add('hidden');
+
+        if (score === 10) {
+            confettiAnimation();
+        }
+
+        // Simula l'invio dell'email
+        const emailContent = {
+            name: userName,
+            result: resultText,
+            incorrect: incorrectAnswers
+        };
+        console.log("Simulazione invio email. Dati da inviare:", emailContent);
+    }
+
+    restartButton.addEventListener('click', () => {
+        resultContainer.classList.add('hidden');
+        quizSection.classList.remove('hidden');
+        quizForm.reset();
+        loadQuiz();
+    });
+
+    function confettiAnimation() {
+        const canvas = document.getElementById('confetti-canvas');
+        const ctx = canvas.getContext('2d');
+        let W = window.innerWidth;
+        let H = window.innerHeight;
+        canvas.width = W;
+        canvas.height = H;
+
+        const maxConfettis = 100;
+        const confettis = [];
+        const colors = [
+            { front: '#7d58ff', back: '#6245e0' },
+            { front: '#b348ff', back: '#9135cc' },
+            { front: '#ff488e', back: '#cc3567' },
+            { front: '#ffc148', back: '#e0a135' },
+            { front: '#58ff90', back: '#45e07a' }
+        ];
+
+        function Confetti() {
+            this.randomModifier = Math.random();
+            this.color = colors[Math.floor(this.randomModifier * colors.length)];
+            this.dimensions = {
+                x: Math.random() * 10,
+                y: Math.random() * 10
+            };
+            this.position = {
+                x: Math.random() * W,
+                y: H - 1
+            };
+            this.rotation = Math.random() * 360;
+            this.scale = {
+                x: 1,
+                y: 1
+            };
+            this.velocity = {
+                x: Math.random() * 5 - 2.5,
+                y: Math.random() * -10
+            };
+        }
+
+        Confetti.prototype.update = function() {
+            this.velocity.x -= this.velocity.x * 0.01;
+            this.velocity.y -= this.velocity.y * 0.01;
+            this.velocity.y += 0.1;
+            
+            this.rotation += this.velocity.x;
+            
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y;
+            
+            if (this.position.y >= H) {
+                this.position.y = H;
+                this.velocity.y = 0;
+            }
+        }
+        
+        Confetti.prototype.draw = function() {
+            ctx.save();
+            ctx.translate(this.position.x, this.position.y);
+            ctx.rotate(this.rotation * Math.PI / 180);
+            ctx.scale(this.scale.x, this.scale.y);
+
+            ctx.fillStyle = this.color.front;
+            ctx.fillRect(-this.dimensions.x / 2, -this.dimensions.y / 2, this.dimensions.x, this.dimensions.y);
+            
+            ctx.restore();
+        }
+
+        function createConfetti() {
+            if (confettis.length < maxConfettis) {
+                confettis.push(new Confetti());
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, W, H);
+            
+            confettis.forEach(c => c.update());
+            confettis.forEach(c => c.draw());
+            
+            animationFrame = requestAnimationFrame(animate);
+        }
+        
+        let interval = setInterval(createConfetti, 100);
+        let animationFrame = requestAnimationFrame(animate);
+
+        setTimeout(() => {
+            clearInterval(interval);
+            cancelAnimationFrame(animationFrame);
+            ctx.clearRect(0, 0, W, H);
+            canvas.width = 0;
+            canvas.height = 0;
+        }, 3000);
+    }
+</script>
+</body>
+</html>
